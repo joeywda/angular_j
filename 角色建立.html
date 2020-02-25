@@ -76,9 +76,10 @@
           };
           //確認是否可以儲存
           self.checkForm = function(checkAbilitySet) {
-            if (!self.editData.name)
+            if (self.editData.name)
             // joey change 'false' to 'true'
-              return false;
+            // joey change if (!self.editData.name)
+              return true;
 
             return checkAbilitySet();
           };
