@@ -1,0 +1,216 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.0/angular.min.js"></script>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+    <meta charset="utf-8">
+    <title>AngularJS</title>
+    <script>
+      (function(){
+        var app = angular.module('myApp',[]);
+        app.service('LocalStorageService', function() {
+          var self = this;
+          self.GetProperty = function(propertyName) {
+            var result = localStorage.getItem(propertyName);
+            result = result || "[]";
+            return angular.fromJson(result);
+          };
+          self.SetProperty = function(propertyName, value) {
+            localStorage.setItem(propertyName, angular.toJson(value));
+          };
+        });
+        app.controller('CharacterController', ['$filter', 'LocalStorageService',function($filter, LocalStorageService) {
+          var self = this;
+          var propertyName = "RoleList";
+          self.isList = true;
+          // 角色
+          self.characters = LocalStorageService.GetProperty(propertyName);
+          // 角色編輯備份
+          self.characterBack = {};
+          self.characterInfo = function(character) {
+            // 編輯時先複製一份出來編輯
+            self.characterBack = angular.copy(character);
+            // 取消列表模式
+            self.isList = false;
+            self.tab = 1;
+          };
+          self.backToList = function() {
+            // 清空編輯備份
+            self.characterBack = {};
+            // 列表模式
+            self.isList = true;
+          };
+          self.save = function() {
+            // 尋找 ID 相同的進行修改
+            angular.forEach(self.characters, function(value,key) {
+              if(value.id === self.characterBack.id) {
+                self.characters[key] = self.characterBack;
+                LocalStorageService.SetProperty(propertyName,self.characters);
+                self.isList = true;
+                return;
+              }
+            });
+          };
+          // 確認下一步是否可以進行
+          self.checkNext = function(step) {
+            switch(step) {
+              case 1:
+                // 判斷職業
+                if(self.characterBack.job)
+                  return true;
+                break;
+              case 2:
+                // 判斷裝備
+                if(self.characterBack.weapon && self.characterBack.armor)
+                  return true;
+                break;
+              case 3:
+                // 判斷技能
+                if(self.characterBack.skill)
+                  return true;
+                break;
+            }
+          };
+          //TAB
+          self.tab = 1;
+          // 設定現在的 TAB
+          self.setTab = function(tab) {
+            self.tab = tab;
+          };
+          // 確認現在的 TAB
+          self.isTab = function(tab) {
+            return self.tab === tab;
+          };
+          //job
+          self.job = [
+            {name:' 戰士 ',key:1,skill:'warrior',weapon:'sword',armor:'heavy'},
+            {name:' 弓箭手 ',key:2,skill:'archer',weapon:'bow',armor:'medium'},
+            {name:' 幻術師 ',key:3,skill:'mesmer',weapon:'scepter',armor:'light'}
+          ];
+          //weapon
+          self.weapon = [
+            {name:' 短劍 ',key:1,class:'sword',data:{min:1,max:3}},
+            {name:' 長劍 ',key:2,class:'sword',data:{min:3,max:5}},
+            {name:' 雙手劍 ',key:3,class:'sword',data:{min:5,max:10}},
+            {name:' 黃金劍 ',key:4,class:'sword',data:{min:10,max:20}},
+            {name:' 短弓 ',key:5,class:'bow',data:{min:2,max:3}},
+            {name:' 長弓 ',key:6,class:'bow',data:{min:3,max:4}},
+            {name:' 重弩弓 ',key:7,class:'bow',data:{min:4,max:5}},
+            {name:' 黃金弓 ',key:8,class:'bow',data:{min:8,max:13}},
+            {name:' 見習杖 ',key:9,class:'scepter',data:{min:1,max:3}},
+            {name:' 魔術杖 ',key:10,class:'scepter',data:{min:3,max:5}},
+            {name:' 火焰杖 ',key:11,class:'scepter',data:{min:5,max:7}},
+            {name:' 黃金杖 ',key:12,class:'scepter',data:{min:7,max:9}}
+          ];
+          //armor
+          self.armor = [
+            {name:' 布袍 ',key:1,class:'light',data:{value:20}},
+            {name:' 法袍 ',key:2,class:'light',data:{value:30}},
+            {name:' 神聖法袍 ',key:3,class:'light',data:{value:40}},
+            {name:' 布甲 ',key:4,class:'medium',data:{value:40}},
+            {name:' 皮甲 ',key:5,class:'medium',data:{value:50}},
+            {name:' 硬皮盔甲 ',key:6,class:'medium',data:{value:60}},
+            {name:' 骨甲 ',key:7,class:'heavy',data:{value:60}},
+            {name:' 鎖甲 ',key:8,class:'heavy',data:{value:70}},
+            {name:' 鏈甲 ',key:9,class:'heavy',data:{value:80}}
+          ];
+          //skill
+          self.skill = [
+            {name:' 重砍 ',key:1,class:'warrior',data:{min:50,max:80}},
+            {name:' 穿刺射擊 ',key:2,class:'archer',data:{min:30,max:100}},
+            {name:' 心靈震盪 ',key:3,class:'mesmer',data:{min:60,max:70}}
+          ];
+          // 異動職業的時候移除裝備技能
+          self.checkJob = function() {
+            delete self.characterBack.weapon;
+            delete self.characterBack.armor;
+            delete self.characterBack.skill;
+          };
+          // 傳入職業、屬性欄位 回傳值
+          self.checkItem = function(job, attr) {
+            var data = self.filterJob(job);
+            if(data)
+              return data[attr];
+            else
+              return null;
+          };
+          // 篩選職業 KEY
+          self.filterJob = function(job) {
+            job = job || ' ';
+            var job = $filter('filter')(self.job, {key:job});
+            if(job.length>0)
+              return job[0];
+            else
+              return null;
+          };
+        }]);
+      })();
+    </script>
+  </head>
+  <body>
+    <div ng-app="myApp" ng-controller="CharacterController as character">
+      <!--列表模式就顯示-->
+      <table class="table table-hover" ng-show="character.isList">
+        <tr>
+          <td>#</td>
+          <td>名稱</td>
+          <td>功能</td>
+        </tr>
+        <tr ng-repeat="item in character.characters">
+          <td>{{$index+1}}</td>
+          <td>{{item.name}}</td>
+          <td>
+            <!--點選進入角色資訊模式-->
+            <a class="btn btn-info" ng-click="character.characterInfo(item)">角色資訊</a>
+          </td>
+        </tr>
+      </table>
+      <div ng-hide="character.isList">
+        <ul class="nav nav-pills">
+          <li ng-click="character.setTab(1)" ng-class="{active:character.isTab(1)}">
+            <a>職業</a>
+          </li>
+          <!--當有選職業才出現裝備-->
+          <li ng-click="character.setTab(2)" ng-show="character.checkNext(1)" ng-class="{active:character.isTab(2)}">
+            <a>裝備</a>
+          </li>
+          <!--當有裝備才出現技能-->
+          <li ng-click="character.setTab(3)" ng-show="character.checkNext(2)" ng-class="{active:character.isTab(3)}">
+            <a>技能</a>
+          </li>
+        </ul>
+        <div ng-if="character.isTab(1)">
+          <!--顯示職業-->
+          <select class="form-control" ng-model="character.characterBack.job" ng-options="e.key as e.name for e in character.job" ng-change="character.checkJob()">
+            <option value="">--請選擇職業--</option>
+          </select>
+          <!--有選職業才出現下一步-->
+          <a class="btn btn-primary" ng-show="character.checkNext(1)" ng-click="character.setTab(2)">下一步</a>
+        </div>
+        <div ng-if="character.isTab(2)">
+          <!--顯示武器-->
+          <select class="form-control" ng-model="character.characterBack.weapon" ng-options="e.key as e.name for e in character.weapon | filter:{class:character.checkItem(character.characterBack.job,'weapon')}">
+            <option value="">--請選擇武器--</option>
+          </select>
+          <!--顯示裝備-->
+          <select class="form-control" ng-model="character.characterBack.armor" ng-options="e.key as e.name for e in character.armor | filter:{class:character.checkItem(character.characterBack.job,'armor')}">
+            <option value="">--請選擇裝備--</option>
+          </select>
+          <!--有穿裝備才出現下一步-->
+          <a class="btn btn-primary" ng-show="character.checkNext(2)" ng-click="character.setTab(3)">下一步</a>
+        </div>
+        <div ng-if="character.isTab(3)">
+          <!--顯示技能-->
+          <select class="form-control" ng-model="character.characterBack.skill" ng-options="e.key as e.name for e in character.skill | filter:{class:character.checkItem(character.characterBack.job,'skill')}">
+            <option value="">--請選擇技能--</option>
+          </select>
+          <!--有選技能才出現儲存-->
+          <a class="btn btn-success" ng-show="character.checkNext(3)" ng-click="character.save()">儲存</a>
+        </div>
+        <br />
+        <a class="btn btn-default" ng-click="character.backToList()">回到選單</a>
+      </div>
+    </div>
+  </body>
+</html>
